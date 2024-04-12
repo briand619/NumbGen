@@ -1,0 +1,91 @@
+﻿@page "/"
+
+<PageTitle>NumbGen</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudTextField Style="font-family: courier;" T="string" Variant="Variant.Outlined" Label="Results" Text="@_results" Lines="5" AutoGrow="true" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudGrid>
+            <MudItem xs="6">
+                <MudNumericField Variant="Variant.Outlined" Label="Min" @bind-Value="_minRange" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField Variant="Variant.Outlined" Label="Max" @bind-Value="_maxRange" TextChanged="ValidateRange" />
+            </MudItem>
+        </MudGrid>
+    </MudItem>
+    <MudItem xs="12">
+        <MudGrid>
+            <MudItem xs="6">
+                <MudCheckBox @bind-Value="_allowRepeats" Label="Allow Repeats" @bind-Value:after="ValidateRange"  />
+            </MudItem>
+            <MudItem xs="6">
+                <MudCheckBox @bind-Value="_sortResults" Label="Sort Results" />
+            </MudItem>
+        </MudGrid>
+    </MudItem>
+    <MudItem xs="12">
+        <MudNumericField @bind-Value="_itemsToGenerate" Variant="Variant.Outlined" TextChanged="ValidateRange" Label="Items to Generate" Error="@_invalidItemCount" ErrorText="Can't generate more items than max range" />
+    </MudItem>
+    <MudItem xs="12">
+        <div class="d-flex justify-end">
+            <MudButton @onclick="GenerateNumbers">Generate</MudButton>
+        </div>
+    </MudItem>
+</MudGrid>
+
+@code
+{
+    string _results = string.Empty;
+    int _itemsToGenerate = 10;
+    int _minRange = 1;
+    int _maxRange = 10;
+    bool _allowRepeats;
+    bool _sortResults;
+    bool _invalidItemCount;
+
+    async Task GenerateNumbers()
+    {
+        ICollection<int> results;
+
+        var rnd = new Random();
+
+        if (_itemsToGenerate > _maxRange)
+        {
+            _itemsToGenerate = _maxRange;
+        }
+
+        if (_allowRepeats)
+        {
+            results = new List<int>();
+
+            for (var i = 0; i < _itemsToGenerate; i++)
+            {
+                results.Add(rnd.Next(_minRange, _maxRange + 1));
+            }
+        }
+        else
+        {
+            results = new HashSet<int>();
+
+            while (results.Count < _itemsToGenerate)
+            {
+                results.Add(rnd.Next(_minRange, _maxRange + 1));
+            }
+        }
+
+        if (_sortResults)
+        {
+            results = results.Order().ToList();
+        }
+
+        _results = results.Aggregate(string.Empty, (s, i) => s + i + " ", s => s.Trim());
+    }
+
+    void ValidateRange()
+    {
+        _invalidItemCount = _itemsToGenerate > _maxRange && !_allowRepeats;
+    }
+}
