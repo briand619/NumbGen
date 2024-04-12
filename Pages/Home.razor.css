@@ -1,3 +1,30 @@
 ﻿.grid-container {
     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    grid-column-gap: 10vw;
+    grid-auto-rows: min-content;
+    min-height: 10vh;
+}
+.grid-container .item {
+    font-family: courier;
+    display: flex;
+    justify-content: center;
+    list-style-type: none;
+}
+.app-title > ::deep h5 {
+    text-decoration: underline;
+}
+.results {
+    border: 1px solid;
+    border-color: var(--mud-palette-lines-inputs);
+    border-radius: var(--mud-default-borderradius);
+    padding: 1em;
+}
+.results h2 {
+    float: left;
+    margin: -1.7em 0 0;
+    padding: 0 0.5em;
+    background: var(--mud-palette-background);
+    font-size: 1em;
+    font-weight: normal;
 }

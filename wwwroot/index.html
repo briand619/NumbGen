@@ -33,6 +33,13 @@
 <script src="_framework/blazor.webassembly.js"></script>
 <script>navigator.serviceWorker.register('service-worker.js');</script>
 <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+<script>
+    window.adjustColumnSize = (columnGap, columnSize) => {
+        var grid = document.querySelectorAll('ul.grid-container')[0];
+        grid.style.gridColumnGap = columnGap;
+        grid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${columnSize}, 1fr))`;
+    }
+</script>
 </body>
 
 </html>

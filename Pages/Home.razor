@@ -1,61 +1,90 @@
 ﻿@page "/"
+@inject IJSRuntime JsRuntime
 
 <PageTitle>NumbGen</PageTitle>
 
-<MudGrid>
+<MudGrid Spacing="1">
     <MudItem xs="12">
-        <MudTextField Style="font-family: courier;" T="string" Variant="Variant.Outlined" Label="Results" Text="@_results" Lines="5" AutoGrow="true" ReadOnly="true" />
+        <div class="d-flex justify-center app-title">
+            <MudText Typo="Typo.h5" Class="pt-1">random number maker</MudText>
+        </div>
     </MudItem>
     <MudItem xs="12">
-        <MudGrid>
+        <div class="results">
+            <h2>Results</h2>
+
+            <ul class="grid-container">
+                @foreach (var i in _resultList)
+                {
+                    <li class="item">@i</li>
+                }
+            </ul>
+        </div>
+    </MudItem>
+    <MudItem xs="12">
+        <MudGrid Spacing="1">
             <MudItem xs="6">
-                <MudNumericField Variant="Variant.Outlined" Label="Min" @bind-Value="_minRange" />
+                <MudNumericField Variant="Variant.Outlined" Label="Min" @bind-Value="_minRange" Min="1" />
             </MudItem>
             <MudItem xs="6">
-                <MudNumericField Variant="Variant.Outlined" Label="Max" @bind-Value="_maxRange" TextChanged="ValidateRange" />
+                <MudNumericField Variant="Variant.Outlined" Label="Max" @bind-Value="_maxRange" TextChanged="OnRangeChanged" />
             </MudItem>
         </MudGrid>
     </MudItem>
     <MudItem xs="12">
-        <MudGrid>
-            <MudItem xs="6">
-                <MudCheckBox @bind-Value="_allowRepeats" Label="Allow Repeats" @bind-Value:after="ValidateRange"  />
-            </MudItem>
-            <MudItem xs="6">
-                <MudCheckBox @bind-Value="_sortResults" Label="Sort Results" />
+        <MudGrid Spacing="1">
+            <MudItem xs="12">
+                <div class="d-flex justify-space-between">
+                    <MudCheckBox @bind-Value="_allowRepeats" @bind-Value:after="OnRangeChanged" Label="Allow Repeats" Dense="true" Size="Size.Small" LabelPosition="LabelPosition.End" />
+                    <MudCheckBox @bind-Value="_sortResults" @bind-Value:after="OnSortChanged" Label="Sort Results" Dense="true" Size="Size.Small" LabelPosition="LabelPosition.End" />
+                </div>
             </MudItem>
         </MudGrid>
     </MudItem>
     <MudItem xs="12">
-        <MudNumericField @bind-Value="_itemsToGenerate" Variant="Variant.Outlined" TextChanged="ValidateRange" Label="Items to Generate" Error="@_invalidItemCount" ErrorText="Can't generate more items than max range" />
+        <MudNumericField @bind-Value="_itemsToGenerate"
+                         Variant="Variant.Outlined"
+                         TextChanged="OnRangeChanged"
+                         Label="Items to Generate"
+                         Error="@_invalidRange"
+                         ErrorText="Can't generate more unique items than the specified maximum." />
     </MudItem>
     <MudItem xs="12">
-        <div class="d-flex justify-end">
-            <MudButton @onclick="GenerateNumbers">Generate</MudButton>
+        <div class="d-flex justify-space-between">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="Reset">Reset</MudButton>
+            <MudButton OnClick="GenerateNumbers" Variant="Variant.Filled" Color="Color.Primary" Disabled="_invalidRange">Generate</MudButton>
         </div>
     </MudItem>
 </MudGrid>
 
 @code
 {
-    string _results = string.Empty;
+    List<int> _resultList = [];
+    List<int> _sortedResults = [];
+    List<int> _unsortedResults = [];
     int _itemsToGenerate = 10;
     int _minRange = 1;
     int _maxRange = 10;
     bool _allowRepeats;
     bool _sortResults;
-    bool _invalidItemCount;
+    bool _invalidRange;
+
+    void Reset()
+    {
+        _resultList.Clear();
+        _sortedResults.Clear();
+        _unsortedResults.Clear();
+        _maxRange = _itemsToGenerate = 10;
+        _minRange = 1;
+        _allowRepeats = false;
+        _sortResults = false;
+    }
 
     async Task GenerateNumbers()
     {
         ICollection<int> results;
 
         var rnd = new Random();
-
-        if (_itemsToGenerate > _maxRange)
-        {
-            _itemsToGenerate = _maxRange;
-        }
 
         if (_allowRepeats)
         {
@@ -76,16 +105,30 @@
             }
         }
 
-        if (_sortResults)
-        {
-            results = results.Order().ToList();
-        }
+        _sortedResults = results.Order().ToList();
+        _unsortedResults = results.ToList();
 
-        _results = results.Aggregate(string.Empty, (s, i) => s + i + " ", s => s.Trim());
+        var (columnGap, columnSize) = _maxRange switch
+        {
+            (< 100) => ("1vw", "20px"),
+            >= 100 and < 10000 => ("2vw", "35px"),
+            >= 10000 and < 1000000 => ("5vw", "50px"),
+            >= 1000000 => ("10vw", "50px"),
+        };
+
+
+        await JsRuntime.InvokeVoidAsync("adjustColumnSize", columnGap, columnSize);
+
+        _resultList = _sortResults ? _sortedResults.ToList() : _unsortedResults.ToList();
     }
 
-    void ValidateRange()
+    void OnSortChanged()
     {
-        _invalidItemCount = _itemsToGenerate > _maxRange && !_allowRepeats;
+        _resultList = _sortResults ? _sortedResults.ToList() : _unsortedResults.ToList();
+    }
+
+    void OnRangeChanged()
+    {
+        _invalidRange = _itemsToGenerate > _maxRange && !_allowRepeats;
     }
 }
