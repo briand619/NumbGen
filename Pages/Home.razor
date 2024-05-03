@@ -1,5 +1,4 @@
 ﻿@page "/"
-@inject IJSRuntime JsRuntime
 
 <PageTitle>NumbGen</PageTitle>
 
@@ -13,7 +12,7 @@
         <div class="results">
             <h2>Results</h2>
 
-            <ul class="grid-container">
+            <ul class="grid-container @itemWidth">
                 @foreach (var i in _resultList)
                 {
                     <li class="item">@i</li>
@@ -35,7 +34,7 @@
         <MudGrid Spacing="1">
             <MudItem xs="12">
                 <div class="d-flex justify-space-between">
-                    <MudCheckBox @bind-Value="_allowRepeats" @bind-Value:after="OnRangeChanged" Label="Allow Repeats" Dense="true" Size="Size.Small" LabelPosition="LabelPosition.End" />
+                    <MudCheckBox @bind-Value="_allowRepeats" @bind-Value:after="OnRangeChanged" Label="Allow Repeats" Dense="true" Size="Size.Small" LabelPosition="LabelPosition.End" />                    
                     <MudCheckBox @bind-Value="_sortResults" @bind-Value:after="OnSortChanged" Label="Sort Results" Dense="true" Size="Size.Small" LabelPosition="LabelPosition.End" />
                 </div>
             </MudItem>
@@ -52,6 +51,7 @@
     <MudItem xs="12">
         <div class="d-flex justify-space-between">
             <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="Reset">Reset</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Shuffle" Disabled="_sortResults || _resultList.Count < 1">Shuffle</MudButton>
             <MudButton OnClick="GenerateNumbers" Variant="Variant.Filled" Color="Color.Primary" Disabled="_invalidRange">Generate</MudButton>
         </div>
     </MudItem>
@@ -68,6 +68,7 @@
     bool _allowRepeats;
     bool _sortResults;
     bool _invalidRange;
+    string itemWidth = string.Empty;
 
     void Reset()
     {
@@ -80,16 +81,13 @@
         _sortResults = false;
     }
 
-    async Task GenerateNumbers()
+    void GenerateNumbers()
     {
-        ICollection<int> results;
-
         var rnd = new Random();
+        var results = new List<int>(_itemsToGenerate);
 
         if (_allowRepeats)
         {
-            results = new List<int>();
-
             for (var i = 0; i < _itemsToGenerate; i++)
             {
                 results.Add(rnd.Next(_minRange, _maxRange + 1));
@@ -97,29 +95,31 @@
         }
         else
         {
-            results = new HashSet<int>();
+            var numbers = Enumerable.Range(_minRange, _maxRange - _minRange + 1).ToList();
 
             while (results.Count < _itemsToGenerate)
             {
-                results.Add(rnd.Next(_minRange, _maxRange + 1));
+                var index = rnd.Next(numbers.Count);
+                results.Add(numbers[index]);
+                numbers.RemoveAt(index);
             }
         }
 
-        _sortedResults = results.Order().ToList();
-        _unsortedResults = results.ToList();
+        _unsortedResults = new List<int>(results);
 
-        var (columnGap, columnSize) = _maxRange switch
+        results.Sort();
+
+        _sortedResults = results;
+
+        itemWidth = _maxRange switch
         {
-            (< 100) => ("1vw", "20px"),
-            >= 100 and < 10000 => ("2vw", "35px"),
-            >= 10000 and < 1000000 => ("5vw", "50px"),
-            >= 1000000 => ("10vw", "50px"),
+            (< 100) => "narrow-items",
+            >= 100 and < 10000 => "less-narrow-items",
+            >= 10000 and < 1000000 => "wider-items",
+            _ => "widest-items",
         };
 
-
-        await JsRuntime.InvokeVoidAsync("adjustColumnSize", columnGap, columnSize);
-
-        _resultList = _sortResults ? _sortedResults.ToList() : _unsortedResults.ToList();
+        _resultList = _sortResults ? _sortedResults : _unsortedResults;
     }
 
     void OnSortChanged()
@@ -130,5 +130,28 @@
     void OnRangeChanged()
     {
         _invalidRange = _itemsToGenerate > _maxRange && !_allowRepeats;
+    }
+
+    void Shuffle()
+    {
+        if (!_sortResults)
+        {
+            var tmp = _unsortedResults.ToArray();
+            
+            ShuffleItems(tmp);
+
+            _resultList = tmp.ToList();
+        }
+    }
+
+    void ShuffleItems<T>(T[] array)
+    {
+        var rnd = new Random();
+
+        for (int i = 0; i < array.Length - 1; ++i)
+        {
+            int j = rnd.Next(i, array.Length);
+            (array[j], array[i]) = (array[i], array[j]);
+        }
     }
 }
