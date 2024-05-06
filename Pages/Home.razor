@@ -23,10 +23,10 @@
     <MudItem xs="12">
         <MudGrid Spacing="1">
             <MudItem xs="6">
-                <MudNumericField Variant="Variant.Outlined" Label="Min" @bind-Value="_minRange" Min="1" />
+                <MudNumericField Variant="Variant.Outlined" Label="Min" @bind-Value="_minRange" TextChanged="OnRangeChanged" Min="1" Error="_invalidMin" ErrorText="Min must be less than Max" />
             </MudItem>
             <MudItem xs="6">
-                <MudNumericField Variant="Variant.Outlined" Label="Max" @bind-Value="_maxRange" TextChanged="OnRangeChanged" />
+                <MudNumericField Variant="Variant.Outlined" Label="Max" @bind-Value="_maxRange" TextChanged="OnRangeChanged" Error="_invalidMax" ErrorText="Max must be less than Min" />
             </MudItem>
         </MudGrid>
     </MudItem>
@@ -52,7 +52,7 @@
         <div class="d-flex justify-space-between">
             <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="Reset">Reset</MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Shuffle" Disabled="_sortResults || _resultList.Count < 1">Shuffle</MudButton>
-            <MudButton OnClick="GenerateNumbers" Variant="Variant.Filled" Color="Color.Primary" Disabled="_invalidRange">Generate</MudButton>
+            <MudButton OnClick="GenerateNumbers" Variant="Variant.Filled" Color="Color.Primary" Disabled="_invalidRange || _invalidMax || _invalidMin">Generate</MudButton>
         </div>
     </MudItem>
 </MudGrid>
@@ -68,6 +68,8 @@
     bool _allowRepeats;
     bool _sortResults;
     bool _invalidRange;
+    bool _invalidMin;
+    bool _invalidMax;
     string itemWidth = string.Empty;
 
     void Reset()
@@ -124,34 +126,29 @@
 
     void OnSortChanged()
     {
-        _resultList = _sortResults ? _sortedResults.ToList() : _unsortedResults.ToList();
+        _resultList = _sortResults ? new List<int>(_sortedResults) : new List<int>(_unsortedResults);
     }
 
     void OnRangeChanged()
     {
-        _invalidRange = _itemsToGenerate > _maxRange && !_allowRepeats;
+        _invalidMax = _maxRange <= _minRange;
+        _invalidMin = _minRange >= _maxRange;
+        _invalidRange = _itemsToGenerate > (_maxRange - _minRange + 1) && !_allowRepeats;
     }
 
     void Shuffle()
     {
         if (!_sortResults)
-        {
-            var tmp = _unsortedResults.ToArray();
-            
-            ShuffleItems(tmp);
+        {   
+            var rnd = new Random();
 
-            _resultList = tmp.ToList();
-        }
-    }
+            for (int i = 0; i < _unsortedResults.Count - 1; ++i)
+            {
+                int j = rnd.Next(i, _unsortedResults.Count);
+                (_unsortedResults[j], _unsortedResults[i]) = (_unsortedResults[i], _unsortedResults[j]);
+            }
 
-    void ShuffleItems<T>(T[] array)
-    {
-        var rnd = new Random();
-
-        for (int i = 0; i < array.Length - 1; ++i)
-        {
-            int j = rnd.Next(i, array.Length);
-            (array[j], array[i]) = (array[i], array[j]);
+            _resultList = _unsortedResults.ToList();
         }
     }
 }
